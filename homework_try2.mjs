@@ -1,14 +1,42 @@
 import { access, copyFile, readFile, writeFile } from 'fs/promises';
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
 
-let args = process.argv.slice(2);
+const argv = yargs(hideBin(process.argv))
+  .usage('Uso: $0 <comandos> <archivo> [opciones]')
+  .command('s/<find>/<replace>/', 'Comando de sustitución')
+  .option('i', {
+    alias: 'inplace',
+    describe: 'Modificación en el lugar con extensión',
+    type: 'string',
+  })
+  .option('n', {
+    alias: 'silent',
+    describe: 'Modo silencioso',
+    type: 'boolean',
+  })
+  .option('f', {
+    alias: 'script-file',
+    describe: 'Archivo de comandos',
+    type: 'string',
+  })
+  .option('p', {
+    alias: 'print',
+    describe: 'Imprimir resultados',
+    type: 'boolean',
+  })
+  .option('g', {
+    alias: 'global',
+    describe: 'Sustitución global',
+    type: 'boolean',
+  })
+  .demandCommand(1, 'Debe proporcionar al menos un archivo para procesar.')
+  .help()
+  .argv;
 
-let commands = args.filter(arg => arg.startsWith('s/') || arg.startsWith('-e'));
-let fileName = args.find(arg => !arg.startsWith('-') && !arg.startsWith('s/') && !arg.startsWith('-e'));
-let silent = args.includes('-n');
-let inplace = args.find(arg => arg.startsWith('-i'));
-let scriptFile = args.find(arg => arg.startsWith('-f'));
-let print = args.includes('p');
-let global = args.includes('g');
+const commands = argv._.filter((arg) => typeof arg === 'string' && arg.startsWith('s/'));
+const fileName = argv._.find((arg) => typeof arg === 'string' && !arg.startsWith('s/'));
+const { inplace, silent, scriptFile, print, global } = argv; // Desestructuración de las opciones
 
 async function main() {
   if (!fileName) {
@@ -24,7 +52,7 @@ async function main() {
   }
 
   if (inplace) {
-    let extension = inplace.slice(3);
+    let extension = inplace;
     try {
       await copyFile(fileName, `${fileName}.${extension}`);
     } catch (err) {
@@ -42,11 +70,11 @@ async function main() {
   }
 
   if (scriptFile) {
-    let scriptFileName = scriptFile.slice(2);
+    let scriptFileName = scriptFile;
     try {
       await access(scriptFileName);
       let scriptCommands = (await readFile(scriptFileName, 'utf8')).split('\n').filter(line => line.startsWith('s/'));
-      commands = commands.concat(scriptCommands);
+      commands.push(...scriptCommands);
     } catch (err) {
       console.log(`Failed to read the script file: ${err}`);
       return;
@@ -54,24 +82,22 @@ async function main() {
   }
 
   for (let command of commands) {
-    let realCommand = command;
-    if (command.startsWith('-e')) {
-      realCommand = command.slice(2);
-    }
-    let match = realCommand.match(/s\/(.*?)\/(.*?)\//);
+    let match = command.match(/s\/(.*?)\/(.*?)\//);
     if (!match) {
-      console.log(`Invalid substitution command: ${realCommand}`);
+      console.log(`Invalid substitution command: ${command}`);
       continue;
     }
-    
+  
     let [, find, replace] = match;
-    if (!silent) {
-      let newResult = fileData.replace(new RegExp(find, global ? 'g' : ''), replace);
-      if (print) console.log(newResult);
-      fileData = newResult; // Almacena el resultado para la próxima iteración
+    let newResult = fileData.replace(new RegExp(find, global ? 'g' : ''), replace);
+  
+    if (!silent || print) {
+      console.log(newResult);
     }
+    fileData = newResult; // Almacena el resultado para la próxima iteración
   }
   
+
   // Escribe el resultado final al archivo si se requiere
   if (inplace) {
     try {
@@ -79,7 +105,7 @@ async function main() {
       console.log(`Successfully wrote to the file: ${fileName}`);
     } catch (err) {
       throw new Error(`Failed to write to the file: ${err}`);
-    } 
+    }
   }
 }
 
