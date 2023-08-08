@@ -40,14 +40,14 @@ const { inplace, silent, scriptFile, print, global } = argv; // Desestructuraci�
 
 async function main() {
   if (!fileName) {
-    console.log('File name not provided.');
+    console.log('Nombre de archivo no proporcionado.');
     return;
   }
 
   try {
     await access(fileName);
   } catch {
-    console.log(`File does not exist: ${fileName}`);
+    console.log(`El archivo no existe: ${fileName}`);
     return;
   }
 
@@ -56,7 +56,7 @@ async function main() {
     try {
       await copyFile(fileName, `${fileName}.${extension}`);
     } catch (err) {
-      console.log(`Failed to make a copy of the file: ${err}`);
+      console.log(`Error al hacer una copia del archivo: ${err}`);
       return;
     }
   }
@@ -65,7 +65,7 @@ async function main() {
   try {
     fileData = await readFile(fileName, 'utf8');
   } catch (err) {
-    console.log(`Failed to read the file: ${err}`);
+    console.log(`Error al leer el archivo: ${err}`);
     return;
   }
 
@@ -76,7 +76,7 @@ async function main() {
       let scriptCommands = (await readFile(scriptFileName, 'utf8')).split('\n').filter(line => line.startsWith('s/'));
       commands.push(...scriptCommands);
     } catch (err) {
-      console.log(`Failed to read the script file: ${err}`);
+      console.log(`Error al leer el Script: ${err}`);
       return;
     }
   }
@@ -84,7 +84,7 @@ async function main() {
   for (let command of commands) {
     let match = command.match(/s\/(.*?)\/(.*?)\//);
     if (!match) {
-      console.log(`Invalid substitution command: ${command}`);
+      console.log(`Comando de sustitución no válido: ${command}`);
       continue;
     }
   
@@ -102,9 +102,9 @@ async function main() {
   if (inplace) {
     try {
       await writeFile(fileName, fileData);
-      console.log(`Successfully wrote to the file: ${fileName}`);
+      console.log(`Se escribió con éxito en el archivo: ${fileName}`);
     } catch (err) {
-      throw new Error(`Failed to write to the file: ${err}`);
+      throw new Error(`Error al escribir en el archivo: ${err}`);
     }
   }
 }
