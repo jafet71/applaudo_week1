@@ -134,4 +134,4 @@ function printOutput(output) {
 }
 
 // Ejecutar función principal
-main();
+main().catch(error => console.log(error.message));
