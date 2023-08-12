@@ -100,8 +100,15 @@ async function applySubstitution(fileName, selectedCommand) {
   printOutput(newResult);
 
   if (inplace) {
+    // Agregar la extensión al nombre del archivo de copia de seguridad
+    const backupFileName = `${fileName}.${inplace}`;
+    await writeFile(backupFileName, fileData); // Crear la copia de seguridad
+
+    // Ahora también escribir los cambios en el archivo original
     await writeFile(fileName, newResult);
-    console.log(`Se escribió con éxito en el archivo: ${fileName}`);
+
+    console.log(`Se creó una copia de seguridad en: ${backupFileName}`);
+    console.log(`Se escribieron los cambios en el archivo original: ${fileName}`);
   }
 }
 
@@ -134,4 +141,4 @@ function printOutput(output) {
 }
 
 // Ejecutar función principal
-main().catch(error => console.log(error.message));
+main();
