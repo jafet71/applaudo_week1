@@ -34,17 +34,48 @@ const argv = yargs(hideBin(process.argv))
     describe: 'Sustitución global',
     type: 'boolean',
   })
+  .option('b', {
+    alias: 'backup-path',
+    describe: 'Ruta para guardar la copia de seguridad del archivo',
+    type: 'string',
+  })
+  .option('e', {
+    alias: 'extra',
+    describe: 'Comandos de sustitución adicionales',
+    type: 'array',
+  })
+  .option('x', {
+    alias: 'execute-script',
+    describe: 'Ejecutar comandos desde un archivo',
+    type: 'string',
+  })
   .demandCommand(2, 'Debe proporcionar al menos un archivo y un comando.')
   .help()
   .argv;
 
-const [command, fileName] = argv._;
-const { inplace, silent, scriptFile, print, global } = argv;
+const [fileName, ...commands] = argv._;
+const { inplace, silent, scriptFile, print, global, backupPath, executeScript } = argv;
 
 // Función principal
 async function main() {
   try {
-    await processFile(fileName, command);
+    if (executeScript) {
+      const scriptContent = await readFile(executeScript);
+      const scriptCommands = scriptContent.trim().split('\n');
+      for (const cmd of scriptCommands) {
+        await processFile(fileName, cmd);
+      }
+    } else if (scriptFile) {
+      const scriptContent = await readFile(scriptFile);
+      const scriptCommands = scriptContent.trim().split('\n');
+      for (const cmd of scriptCommands) {
+        await processFile(fileName, cmd);
+      }
+    } else {
+      for (const command of commands) {
+        await processFile(fileName, command);
+      }
+    }
   } catch (error) {
     console.log(error.message);
   }
@@ -100,11 +131,8 @@ async function applySubstitution(fileName, selectedCommand) {
   printOutput(newResult);
 
   if (inplace) {
-    // Agregar la extensión al nombre del archivo de copia de seguridad
-    const backupFileName = `${fileName}.${inplace}`;
-    await writeFile(backupFileName, fileData); // Crear la copia de seguridad
-
-    // Ahora también escribir los cambios en el archivo original
+    const backupFileName = path.join(backupPath || path.dirname(fileName), `${path.basename(fileName, path.extname(fileName))}.${inplace}`);
+    await writeFile(backupFileName, fileData);
     await writeFile(fileName, newResult);
 
     console.log(`Se creó una copia de seguridad en: ${backupFileName}`);
